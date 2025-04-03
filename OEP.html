@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="hu">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Felhasználói történet készítő</title>
+    <style>
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px auto;
+            flex-wrap: wrap;
+            max-width: 80%;
+        }
+
+        .button-container button {
+            margin: 0;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        table {
+            width: 60%;
+            border-collapse: collapse;
+            margin: 20px auto;
+        }
+
+        @media (max-width: 1000px) {
+            table {
+                width: 100%;
+            }
+        }
+
+        th,
+        td {
+            border: 1px solid black;
+            padding: 0;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        th {
+            background-color: #4A90E2;
+            color: white;
+            padding: 8px;
+        }
+
+        .very-dark-blue {
+            background-color: #4A90E2;
+            padding: 0px;
+        }
+
+        .dark-blue {
+            background-color: #B0D4FF;
+        }
+
+        .light-blue {
+            background-color: #D6E9FF;
+        }
+
+        button {
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            display: block;
+            border: none;
+            outline: none;
+            color: #fff;
+            background: #4A90E2;
+            position: relative;
+            z-index: 0;
+            border-radius: 10px;
+        }
+
+        .glow-on-hover {
+            width: 220px;
+            height: 50px;
+            border: none;
+            outline: none;
+            color: #fff;
+            background: #111;
+            cursor: pointer;
+            position: relative;
+            z-index: 0;
+            border-radius: 10px;
+        }
+
+        .glow-on-hover:before {
+            content: '';
+            background: linear-gradient(45deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000);
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            background-size: 400%;
+            z-index: -1;
+            filter: blur(5px);
+            width: calc(100% + 4px);
+            height: calc(100% + 4px);
+            animation: glowing 20s linear infinite;
+            opacity: 0;
+            transition: opacity .3s ease-in-out;
+            border-radius: 10px;
+        }
+
+        .glow-on-hover:active {
+            color: #000
+        }
+
+        .glow-on-hover:active:after {
+            background: transparent;
+        }
+
+        .glow-on-hover:hover:before {
+            opacity: 1;
+        }
+
+        .glow-on-hover:after {
+            z-index: -1;
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: #111;
+            left: 0;
+            top: 0;
+            border-radius: 10px;
+        }
+
+        @keyframes glowing {
+            0% {
+                background-position: 0 0;
+            }
+
+            50% {
+                background-position: 400% 0;
+            }
+
+            100% {
+                background-position: 0 0;
+            }
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 1em;
+            max-height: 1000em;
+            border: none;
+            resize: none;
+            font-family: inherit;
+            font-size: inherit;
+            padding: 2px;
+            box-sizing: border-box;
+            text-align: left;
+            overflow-y: auto;
+        }
+
+        .very-dark-blue textarea {
+            padding: 2px;
+            height: 1.5em;
+            min-height: 1.5em;
+            max-height: 1.5em;
+        }
+
+        .merged-cell {
+            padding: 0;
+        }
+
+        th:nth-child(1) {
+            width: 30%;
+        }
+
+        th:nth-child(2) {
+            width: 10%;
+        }
+
+        th:nth-child(3) {
+            width: 60%;
+        }
+
+        .middleofit textarea {
+            text-align: center;
+        }
+
+        .table-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 10px auto;
+            flex-wrap: wrap;
+        }
+
+        .table-buttons button {
+            margin: 0;
+            min-width: 150px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="button-container">
+        <button onclick="addNewTable()" class="glow-on-hover">Új tábla hozzáadása</button>
+        <button onclick="exportTables()" class="glow-on-hover">Táblázatok exportálása</button>
+        <input type="file" id="importFile" style="display:none" onchange="importTables(event)">
+        <button onclick="document.getElementById('importFile').click()" class="glow-on-hover">Táblázatok
+            importálása</button>
+    </div>
+
+    <script>
+        let counter = 1;
+        let history = {}; // To track added rows for undo functionality
+
+        function addRows(tableId) {
+            let table = document.getElementById(tableId).getElementsByTagName('tbody')[0];
+            let colorClass = (history[tableId].counter % 2 === 0) ? "dark-blue" : "light-blue";
+
+            let newBlock = document.createElement('tbody');
+            newBlock.innerHTML = `
+        <tr class="${colorClass}">
+            <td class="merged-cell ${colorClass}" rowspan="3">
+                <textarea class="${colorClass}" oninput="autoResize(this)">text</textarea>
+            </td>
+            <td class="middleofit"><textarea class="${colorClass}" oninput="autoResize(this)">GIVEN</textarea></td>
+            <td><textarea class="${colorClass}" oninput="autoResize(this)">text</textarea></td>
+        </tr>
+        <tr class="${colorClass}">
+            <td class="middleofit"><textarea class="${colorClass}" oninput="autoResize(this)">WHEN</textarea></td>
+            <td><textarea class="${colorClass}" oninput="autoResize(this)">text</textarea></td>
+        </tr>
+        <tr class="${colorClass}">
+            <td class="middleofit"><textarea class="${colorClass}" oninput="autoResize(this)">THEN</textarea></td>
+            <td><textarea class="${colorClass}" oninput="autoResize(this)">text</textarea></td>
+        </tr>
+    `;
+
+            Array.from(newBlock.rows).forEach(row => {
+                table.appendChild(row);
+            });
+
+            table.querySelectorAll('textarea').forEach(textarea => {
+                autoResize(textarea);
+            });
+
+            // Store added rows for undo functionality
+            history[tableId].rows.push(newBlock);
+            history[tableId].counter++;
+        }
+
+
+        function deleteLastRow(tableId) {
+            let table = document.getElementById(tableId).getElementsByTagName('tbody')[0];
+            let rows = table.rows;
+
+            if (rows.length > 3) { // Don't delete the initial rows
+                for (let i = 0; i < 3; i++) {
+                    table.deleteRow(rows.length - 1);
+                }
+
+                history[tableId].counter--;
+
+                // Update history
+                if (history[tableId].rows.length > 0) {
+                    history[tableId].rows.pop();
+                }
+            }
+        }
+
+
+        async function copyTableAsImage(tableId) {
+            try {
+                const table = document.getElementById(tableId);
+
+                // Először minden textarea tartalmát átmásoljuk div-be a megfelelő formázáshoz
+                const textareas = table.querySelectorAll('textarea');
+                const replacements = [];
+
+                textareas.forEach(textarea => {
+                    // Létrehozunk egy div-et, ami megjeleníti a textarea tartalmát
+                    const replacement = document.createElement('div');
+                    replacement.style.width = `${textarea.offsetWidth}px`;
+                    replacement.style.minHeight = `${textarea.offsetHeight}px`;
+                    replacement.style.padding = '2px';
+                    replacement.style.boxSizing = 'border-box';
+                    replacement.style.whiteSpace = 'pre-wrap';
+                    replacement.style.wordWrap = 'break-word';
+                    replacement.style.fontFamily = getComputedStyle(textarea).fontFamily;
+                    replacement.style.fontSize = getComputedStyle(textarea).fontSize;
+                    replacement.style.lineHeight = getComputedStyle(textarea).lineHeight;
+                    replacement.style.color = getComputedStyle(textarea).color;
+                    replacement.style.backgroundColor = getComputedStyle(textarea).backgroundColor;
+                    replacement.style.border = 'none';
+                    replacement.style.overflow = 'hidden';
+                    replacement.style.display = 'inline-block';
+                    replacement.style.verticalAlign = 'middle';
+
+                    // Középre igazítás, ha middleofit osztály van
+                    if (textarea.parentElement.classList.contains('middleofit')) {
+                        replacement.style.textAlign = 'center';
+                        replacement.style.display = 'flex';
+                        replacement.style.justifyContent = 'center';
+                        replacement.style.alignItems = 'center';
+                    }
+
+                    replacement.textContent = textarea.value;
+
+                    // Elhelyezzük a div-et a textarea helyén
+                    textarea.parentNode.insertBefore(replacement, textarea);
+                    textarea.style.visibility = 'hidden';
+                    replacements.push({ textarea, replacement });
+                });
+
+                // Várunk egy kicsit, hogy a DOM frissüljön
+                await new Promise(resolve => setTimeout(resolve, 50));
+
+                // Készítjük a képet
+                const canvas = await html2canvas(table, {
+                    scale: 2, // Nagyobb felbontás
+                    logging: true,
+                    allowTaint: true,
+                    useCORS: true,
+                    scrollX: 0,
+                    scrollY: 0,
+                    ignoreElements: (element) => {
+                        // Kihagyjuk az elrejtett textarea-kat
+                        return element.tagName === 'TEXTAREA' && element.style.visibility === 'hidden';
+                    }
+                });
+
+                // Visszaállítjuk az eredeti textarea-kat
+                replacements.forEach(({ textarea, replacement }) => {
+                    textarea.style.visibility = '';
+                    replacement.parentNode.removeChild(replacement);
+                });
+
+                // Másolás a vágólapra
+                canvas.toBlob((blob) => {
+                    navigator.clipboard.write([
+                        new ClipboardItem({
+                            'image/png': blob
+                        })
+                    ]).then(() => {
+                        alert('Táblázat képe másolva a vágólapra!');
+                    }).catch(err => {
+                        console.error('Hiba a másolás során:', err);
+                        alert('Hiba történt a másolás során');
+                    });
+                });
+            } catch (err) {
+                console.error('Hiba:', err);
+                alert('Hiba történt a kép generálása során');
+            }
+        }
+
+
+        function deleteTable(tableId) {
+            let table = document.getElementById(tableId);
+            let buttons = table.nextElementSibling;
+            if (buttons && buttons.className === 'table-buttons') {
+                table.remove();
+                buttons.remove();
+                delete history[tableId];
+            }
+        }
+
+        function addNewTable() {
+            let newTableId = 'table' + new Date().getTime();
+
+            let newTable = `
+        <table id="${newTableId}">
+            <thead>
+                <tr class="very-dark-blue">
+                    <th><textarea class="very-dark-blue" oninput="autoResize(this)">As text</textarea></th>
+                    <th><textarea class="very-dark-blue" readonly oninput="autoResize(this)"></textarea></th>
+                    <th><textarea class="very-dark-blue" readonly oninput="autoResize(this)">Leírás</textarea></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="dark-blue">
+                    <td class="merged-cell dark-blue" rowspan="3">
+                        <textarea class="dark-blue" oninput="autoResize(this)">text</textarea>
+                    </td>
+                    <td class="middleofit"><textarea class="dark-blue" oninput="autoResize(this)">GIVEN</textarea></td>
+                    <td><textarea class="dark-blue" oninput="autoResize(this)">text</textarea></td>
+                </tr>
+                <tr class="dark-blue">
+                    <td class="middleofit"><textarea class="dark-blue" oninput="autoResize(this)">WHEN</textarea></td>
+                    <td><textarea class="dark-blue" oninput="autoResize(this)">text</textarea></td>
+                </tr>
+                <tr class="dark-blue">
+                    <td class="middleofit"><textarea class="dark-blue" oninput="autoResize(this)">THEN</textarea></td>
+                    <td><textarea class="dark-blue" oninput="autoResize(this)">text</textarea></td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="table-buttons">
+            <button onclick="addRows('${newTableId}')" class="glow-on-hover">Sorok hozzáadása</button>
+            <button onclick="deleteLastRow('${newTableId}')" class="glow-on-hover">Sorok törlése</button>
+            <button onclick="copyTableAsImage('${newTableId}')" class="glow-on-hover">Kép másolás</button>
+            <button onclick="deleteTable('${newTableId}')" class="glow-on-hover">Tábla törlése</button>
+        </div>
+    `;
+
+            document.body.insertAdjacentHTML('beforeend', newTable);
+
+            // Initialize history for the new table, with its own counter and row tracking
+            history[newTableId] = {
+                counter: 1,
+                rows: []
+            };
+        }
+
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = (textarea.scrollHeight) + 'px';
+        }
+
+        function exportTables() {
+            let tables = document.querySelectorAll('table');
+
+            // Update all textarea values for export
+            document.querySelectorAll('textarea').forEach(textarea => {
+                textarea.setAttribute('value', textarea.value);
+            });
+
+            // Create an object to store all export data
+            let exportData = {
+                tables: [],
+                history: history
+            };
+
+            // Loop through each table
+            tables.forEach(table => {
+                let tableData = {
+                    html: table.outerHTML
+                };
+
+                let nextElement = table.nextElementSibling;
+                if (nextElement && nextElement.className === 'table-buttons') {
+                    tableData.buttons = nextElement.outerHTML;
+                }
+
+                exportData.tables.push(tableData);
+            });
+
+            // Create a Blob with the data and download it as a JSON file
+            let blob = new Blob([JSON.stringify(exportData)], { type: 'application/json' });
+            let link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'tables.json';
+            link.click();
+        }
+
+
+        function importTables(event) {
+            let file = event.target.files[0];
+            let reader = new FileReader();
+
+            reader.onload = function (e) {
+                try {
+                    let importedData = JSON.parse(e.target.result);
+
+                    // Clear existing history
+                    history = importedData.history || {};
+
+                    // Import tables
+                    importedData.tables.forEach(tableData => {
+                        let tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = tableData.html;
+                        let table = tempDiv.querySelector('table');
+                        document.body.appendChild(table);
+
+                        if (tableData.buttons) {
+                            tempDiv.innerHTML = tableData.buttons;
+                            let buttons = tempDiv.firstChild;
+                            document.body.appendChild(buttons);
+
+                            // Set up button event handlers
+                            let tableId = table.id;
+                            let buttonsElements = buttons.querySelectorAll('button');
+                            buttonsElements[0].onclick = function () { addRows(tableId); };
+                            buttonsElements[1].onclick = function () { deleteLastRow(tableId); };
+                            buttonsElements[2].onclick = function () { copyTableAsImage(tableId); };
+                            buttonsElements[3].onclick = function () { deleteTable(tableId); };
+                            buttonsElements.forEach(btn => btn.className = 'glow-on-hover');
+                        }
+                    });
+
+                    // Set textarea values
+                    document.querySelectorAll('textarea').forEach(textarea => {
+                        if (textarea.hasAttribute('value')) {
+                            textarea.value = textarea.getAttribute('value');
+                            autoResize(textarea);
+                        }
+                    });
+
+                } catch (err) {
+                    console.error('Hiba az importálás során:', err);
+                    alert('Hiba történt az importálás során');
+                }
+            };
+
+            reader.readAsText(file);
+        }
+
+        // Load html2canvas library dynamically for image copying
+        function loadHtml2Canvas() {
+            return new Promise((resolve, reject) => {
+                if (typeof html2canvas !== 'undefined') {
+                    resolve();
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.src = 'https://html2canvas.hertzen.com/dist/html2canvas.min.js';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        // Initialize the html2canvas when page loads
+        loadHtml2Canvas().catch(err => {
+            console.error('Failed to load html2canvas:', err);
+        });
+    </script>
+</body>
+
+</html>
